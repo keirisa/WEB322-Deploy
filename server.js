@@ -10,84 +10,70 @@
 *
 ********************************************************************************/
 const express = require('express');
+const path = require('path'); 
 const legoData = require('./modules/legoSets');
-const path = require('path'); // import path module for cleaner directory handling
 const app = express();
 const HTTP_PORT = process.env.PORT || 8080;
 
-// set view engine to ejs
-app.set('view engine', 'ejs'); 
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
 
-// set views directory, ensuring compatibility for deployment
+// Set the views directory
 app.set('views', path.join(__dirname, 'views'));
 
-// serve static files from public directory
+// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// initialize legoData then start server
+// Initialize lego data and start the server
 legoData.initialize()
     .then(() => {
         app.listen(HTTP_PORT, () => {
-            console.log(`server is running at http://localhost:${HTTP_PORT}`);
+            console.log(`Server is running at http://localhost:${HTTP_PORT}`);
         });
     })
     .catch(err => {
-        console.error("failed to initialize lego data:", err);
+        console.error("Failed to initialize Lego data:", err);
     });
 
-// home route
+// Route for the home page
 app.get('/', (req, res) => {
-    res.render("home");
+    res.render("home", { page: '/' });
 });
 
-// about route
+// Route for the about page
 app.get('/about', (req, res) => {
-    res.render("about");
+    res.render("about", { page: '/about' });
 });
 
-// route to display all sets or filter by theme
+// Route for Lego sets with an optional theme query parameter
 app.get('/lego/sets', (req, res) => {
     const theme = req.query.theme;
     if (theme) {
         legoData.getSetsByTheme(theme)
             .then(data => {
-                if (data.length === 0) {
-                    res.status(404).render("404", { message: "no sets found for the specified theme." });
-                } else {
-                    res.render("sets", { sets: data, theme, page: '/lego/sets' });
-                }
+                res.render('sets', { sets: data, theme, page: '/lego/sets' });
             })
             .catch(err => {
-                res.status(404).render("404", { message: "an error occurred while fetching the sets by theme." });
+                res.status(404).render('404', { page: '', message: "No sets found for the specified theme." });
             });
     } else {
         legoData.getAllSets()
             .then(data => {
-                res.render("sets", { sets: data, page: '/lego/sets' });
+                res.render('sets', { sets: data, theme: null, page: '/lego/sets' });
             })
             .catch(err => {
-                res.status(500).render("404", { message: "an error occurred while fetching all sets." });
+                res.status(500).render('500', { page: '', message: "Server error retrieving sets." });
             });
     }
 });
 
-// route for individual set pages
+// Route for specific Lego set by set_num
+// Since legoSetDetail.ejs is not needed, we will render a 404 error page here
 app.get('/lego/sets/:set_num', (req, res) => {
-    const setNum = req.params.set_num;
-    legoData.getSetByNum(setNum)
-        .then(data => {
-            if (!data) {
-                res.status(404).render("404", { message: "set not found." });
-            } else {
-                res.render("set", { set: data, page: '' });
-            }
-        })
-        .catch(err => {
-            res.status(404).render("404", { message: "an error occurred while fetching the set." });
-        });
+    res.status(404).render('404', { page: '', message: "Set details not available." });
 });
 
-// 404 handler for undefined routes
+// Catch-all for 404 errors
 app.use((req, res) => {
-    res.status(404).render("404", { message: "i'm sorry, we're unable to find what you're looking for" });
+    res.status(404).render('404', { page: '', message: "Page not found." });
 });
