@@ -11,17 +11,18 @@
 ********************************************************************************/
 const express = require('express');
 const legoData = require('./modules/legoSets');
+const path = require('path'); // import path module for cleaner directory handling
 const app = express();
 const HTTP_PORT = process.env.PORT || 8080;
 
 // set view engine to ejs
 app.set('view engine', 'ejs'); 
 
-// set views dir
-app.set('views', `${__dirname}/views`);
+// set views directory, ensuring compatibility for deployment
+app.set('views', path.join(__dirname, 'views'));
 
 // serve static files from public directory
-app.use(express.static(`${__dirname}/public`));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // initialize legoData then start server
 legoData.initialize()
@@ -53,7 +54,7 @@ app.get('/lego/sets', (req, res) => {
                 if (data.length === 0) {
                     res.status(404).render("404", { message: "no sets found for the specified theme." });
                 } else {
-                    res.render("sets", { sets: data, theme });
+                    res.render("sets", { sets: data, theme, page: '/lego/sets' });
                 }
             })
             .catch(err => {
@@ -62,7 +63,7 @@ app.get('/lego/sets', (req, res) => {
     } else {
         legoData.getAllSets()
             .then(data => {
-                res.render("sets", { sets: data });
+                res.render("sets", { sets: data, page: '/lego/sets' });
             })
             .catch(err => {
                 res.status(500).render("404", { message: "an error occurred while fetching all sets." });
@@ -78,7 +79,7 @@ app.get('/lego/sets/:set_num', (req, res) => {
             if (!data) {
                 res.status(404).render("404", { message: "set not found." });
             } else {
-                res.render("set", { set: data });
+                res.render("set", { set: data, page: '' });
             }
         })
         .catch(err => {
